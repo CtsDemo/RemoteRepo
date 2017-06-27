@@ -1,0 +1,160 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<contentHaul xmlns:a="http://www.appian.com/ae/types/2009">
+    <rule>
+        <name>TD_uiMyTaskGrid</name>
+        <uuid>_a-0000de5f-7bd3-8000-3120-01ef9001ef90_3747</uuid>
+        <description></description>
+        <parentUuid>_a-0000de4d-12f8-8000-3120-01ef9001ef90_3170</parentUuid>
+        <visibility>
+            <advertise>false</advertise>
+            <hierarchy>true</hierarchy>
+            <indexable>true</indexable>
+            <quota>false</quota>
+            <searchable>true</searchable>
+            <system>false</system>
+            <unlogged>false</unlogged>
+        </visibility>
+        <definition>load(
+  local!bDisplayDelegatedTasks:false(),
+  local!hideGridData:false(),
+  local!pagingInfo: #"SYSTEM_SYSRULES_pagingInfo"(startIndex: 1, batchSize: 5),
+  with(
+  local!delegationDetails:#"_a-0000de5f-7bd3-8000-3120-01ef9001ef90_3752"(null,tostring(loggedInuser())),
+  local!ID: if(#"d451faff-5591-4b19-8728-b58307163f55"(local!delegationDetails),"",local!delegationDetails.ID),
+  local!delegatedBy:if(#"d451faff-5591-4b19-8728-b58307163f55"(local!delegationDetails),"",local!delegationDetails.DELEGATED_BY),
+  local!uuid:if(#"d451faff-5591-4b19-8728-b58307163f55"(local!delegationDetails),"",local!delegationDetails.APPLICATION_NAME),
+  local!taskDetails: if(#"d451faff-5591-4b19-8728-b58307163f55"(local!ID),null,#"_a-0000de5f-7bd3-8000-3120-01ef9001ef90_3887"(local!ID)),
+  local!delegatedTaskIds: if(#"d451faff-5591-4b19-8728-b58307163f55"(local!taskDetails),{},local!taskDetails.TASK_ID_LISTS),
+  local!portalReportDataSubset: a!queryProcessAnalytics(
+  report:#"_a-0000de4f-bea6-8000-3120-01ef9001ef90_3482",
+  contextUsers: loggedInuser(),
+  query:  #"SYSTEM_SYSRULES_query"(
+    logicalExpression: #"SYSTEM_SYSRULES_queryLogicalExpression"(
+      operator:"AND",
+      filters: if(and(local!bDisplayDelegatedTasks=true()/*,not(rule!APN_isEmpty(local!delegatedBy))*/),
+      /*{
+        a!queryFilter(
+    field: "c6",
+    operator: "in",
+    value: if(rule!APN_isEmpty(local!delegatedBy),"",touser(local!delegatedBy))
+  ),
+  a!queryFilter(
+    field: "c5",
+    operator: "in",
+    value: if(rule!APN_isEmpty(local!uuid),"",tointeger(rule!TD_getPmidByuuid(local!uuid)))
+  )
+  }*/
+  {#"SYSTEM_SYSRULES_queryFilter"(
+    field: "c4",
+    operator: "in",
+    value: local!delegatedTaskIds
+  )},{})
+    ),
+    pagingInfo: local!pagingInfo
+    
+    )
+  ),
+  local!taskReportData:local!portalReportDataSubset.data,
+  local!sucess,
+  local!error,
+  #"SYSTEM_SYSRULES_sectionLayout"(
+  label: "My Task List",
+  firstColumnContents: {
+    #"SYSTEM_SYSRULES_imageField"(
+            images: {
+              #"SYSTEM_SYSRULES_documentImage"(
+                document: #"_a-0000de5f-7bd3-8000-3120-01ef9001ef90_3920",
+                caption: "look for latest Tasks",
+                link: #"SYSTEM_SYSRULES_submitLink"(
+                  label:"",
+                  saveInto:#"SYSTEM_SYSRULES_startProcess"(
+                    processModel: #"_a-0000de5f-7bd3-8000-3120-01ef9001ef90_3924",
+                    processParameters:{},
+                    onSuccess: local!sucess,
+                    onError: local!error
+                  )
+                )
+              )
+            },
+            size: "ICON"
+          ),
+    #"SYSTEM_SYSRULES_dropdownField"(
+      label: "Filter",
+      labelPosition: "ABOVE",
+      placeholderLabel: "--- Select a Value ---",
+      choiceLabels: {"All Tasks","Delegated Tasks"},
+      choiceValues: {false(),true()},
+      value:local!bDisplayDelegatedTasks,
+      saveInto: {local!bDisplayDelegatedTasks,
+      if(and(local!bDisplayDelegatedTasks=true(),#"d451faff-5591-4b19-8728-b58307163f55"(local!delegatedBy)),a!save(local!hideGridData,true()),{a!save(local!hideGridData,false())})
+      },
+      validations: {}
+    ),
+    #"SYSTEM_SYSRULES_gridField"(
+      label: "",
+      labelPosition: "ABOVE",
+      totalCount: local!portalReportDataSubset.totalCount/*count(local!portalReportDataSubset.totalCount)*/,
+      columns: {
+        #"SYSTEM_SYSRULES_gridTextColumn"(
+          label: "Task Name",
+          field:"c0",
+          data: {if(local!hideGridData=true(),{},index(local!taskReportData,"c0",""))},
+          links: apply(
+          #"SYSTEM_SYSRULES_processTaskLink"(task: _),
+          index(local!taskReportData, "dp0", {})
+        )
+        ),
+        #"SYSTEM_SYSRULES_gridTextColumn"(
+          label: "Status",
+          field:"c1",
+          data: {if(local!hideGridData=true(),{},
+          apply(displayvalue(_,{#"_a-0000de5f-7bd3-8000-3120-01ef9001ef90_3782"},{#"_a-0000de5f-7bd3-8000-3120-01ef9001ef90_3781"},{}),index(local!taskReportData,"c1","")))}
+        ),
+        #"SYSTEM_SYSRULES_gridTextColumn"(
+          label: "Assigned On",
+          field:"c3",
+          data: {if(local!hideGridData=true(),{},index(local!taskReportData,"c3",""))}
+        )
+      },
+      value: local!pagingInfo,
+      saveInto: {local!pagingInfo},
+      validations: {}
+    )
+  },
+  secondColumnContents: {
+     
+  },
+  validations: {}
+)
+))</definition>
+        <metadataExpr></metadataExpr>
+        <preferredEditor>interface</preferredEditor>
+        <offlineEnabled>false</offlineEnabled>
+    </rule>
+    <roleMap public="true">
+        <role inherit="true" allowForAll="false" name="readers">
+            <users/>
+            <groups/>
+        </role>
+        <role inherit="true" allowForAll="false" name="authors">
+            <users/>
+            <groups/>
+        </role>
+        <role inherit="true" allowForAll="false" name="administrators">
+            <users/>
+            <groups/>
+        </role>
+        <role inherit="false" allowForAll="false" name="denyReaders">
+            <users/>
+            <groups/>
+        </role>
+        <role inherit="false" allowForAll="false" name="denyAuthors">
+            <users/>
+            <groups/>
+        </role>
+        <role inherit="false" allowForAll="false" name="denyAdministrators">
+            <users/>
+            <groups/>
+        </role>
+    </roleMap>
+</contentHaul>
